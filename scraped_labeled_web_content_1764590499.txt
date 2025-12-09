@@ -1,0 +1,269 @@
+[OTHER]Skip to main content
+[HEADING]Basic Reading and Writing
+[HEADING]Module 5: Grammar
+[OTHER]Search for:
+[HEADING]Text: Articles
+[PARAGRAPH]There are three articles in the English language:
+the
+,
+a
+, and
+an
+. These are divided into two types of articles: definite (
+the
+) and indefinite (
+a
+,
+an
+). The definite article indicates a level of specificity that the indefinite does not. “An apple” could refer to any apple; however “the apple” is referring back to a specific apple.
+[PARAGRAPH]Thus, when using the definite article, the speaker assumes the listener knows the identity of the noun’s referent (because it is obvious, because it is common knowledge, or because it was mentioned in the same sentence or an earlier sentence). Use of an indefinite article implies that the speaker assumes the listener does not have to be told the identity of the referent.
+[PARAGRAPH]There are also cases where no article is required:
+[PARAGRAPH]with generic nouns (plural or uncountable):
+cars have accelerators
+,
+happiness is contagious
+, referring to cars in general and happiness in general (compare
+the happiness I felt yesterday
+, specifying particular happiness);
+[PARAGRAPH]with many proper names:
+Sabrina
+,
+France
+,
+London
+, etc.
+[PARAGRAPH]Watch this quick introduction to indefinite and definite articles and the difference between the two:
+[HEADING]Indefinite Article
+[PARAGRAPH]The indefinite article of English takes the two forms
+a
+and
+an
+. These can be regarded as meaning “one,” usually without emphasis.
+[HEADING]Distinction between
+a
+and
+an
+[PARAGRAPH]You’ve probably learned the rule that
+an
+comes before a vowel, and that
+a
+comes before a consonant. While this is generally true, it’s more accurate to say that
+an
+comes before a vowel
+sound
+, and
+a
+comes before a consonant
+sound
+. Let’s look at a couple of examples with
+a
+:
+[PARAGRAPH]a box
+[PARAGRAPH]a HEPA filter
+[PARAGRAPH](HEPA is pronounced as a word rather than as letters)
+[PARAGRAPH]a one-armed bandit
+[PARAGRAPH](pronounced “won. . . “)
+[PARAGRAPH]a unicorn
+[PARAGRAPH](pronounced “yoo. . . “)
+[PARAGRAPH]Let’s try it again with
+an
+:
+[PARAGRAPH]an apple
+[PARAGRAPH]an EPA policy
+[PARAGRAPH](the letter
+E
+read as a letter still starts with a vowel sound)
+[PARAGRAPH]an SSO
+[PARAGRAPH](pronounced “es-es-oh”)
+[PARAGRAPH]an hour
+[PARAGRAPH](the
+h
+is silent)
+[PARAGRAPH]an heir
+[PARAGRAPH](pronounced “air”)
+[OTHER]Note:
+[PARAGRAPH]Some speakers and writers use
+an
+before a word beginning with the sound
+h
+in an unstressed syllable:
+an historical novel
+,
+an hotel
+. However, where the
+h
+is clearly pronounced, this usage is now less common, and
+a
+is preferred.
+[HEADING]Practice
+[PARAGRAPH]Look at the following words. When they require an indefinite article, should it be
+a
+or
+an
+?
+[PARAGRAPH]ewe
+[PARAGRAPH]SEO specialist
+[PARAGRAPH]apple
+[PARAGRAPH]URL
+[PARAGRAPH]herb
+[OTHER]Click to Show Answer
+[PARAGRAPH]a ewe: pronounced “you”
+[PARAGRAPH]an SEO specialist: pronounced “es-ee-oh”
+[PARAGRAPH]an apple:
+a
+is a vowel sound
+[PARAGRAPH]a URL: pronounced “yoo-ar-el”
+[PARAGRAPH]an herb: the
+h
+is silent
+[HEADING]Definite Article
+[PARAGRAPH]The definite article
+the
+is used when the referent of the noun phrase is assumed to be unique or known from the context. For example, in the sentence “The boy with glasses was looking at the moon,” it is assumed that in the context the reference can only be to one boy and one moon.
+[PARAGRAPH]The
+can be used with both singular and plural nouns, with nouns of any gender, and with nouns that start with any letter. This is different from many other languages which have different articles for different genders or numbers.
+[PARAGRAPH]The
+is the most commonly used word in the English language.
+[HEADING]Practice
+[PARAGRAPH]Choose the article that should go in each sentence:
+[PARAGRAPH]Every day, I eat (a / an / the) egg salad sandwich.
+[PARAGRAPH]I love looking at (a / an / the) stars with you.
+[PARAGRAPH]Dani was planning to buy (a / an / the) book she had been eyeing as soon as she got paid.
+[PARAGRAPH](A / An / The) brain like that will get you far in life.
+[OTHER]Click to Show Answer
+[PARAGRAPH]an; Every day, I eat
+an
+egg salad sandwich.
+[PARAGRAPH]the; I love looking at
+the
+stars with you.
+[PARAGRAPH]the; Dani was planning to buy
+the
+book she had been eyeing as soon as she got paid.
+[PARAGRAPH]a;
+A
+brain like that will get you far in life.
+[HEADING]Word Order
+[PARAGRAPH]In most cases, the article is the first word of its noun phrase, preceding all other adjectives and modifiers.
+[PARAGRAPH]The
+little old red bag held
+a
+very big surprise.
+[PARAGRAPH]There are a few exceptions, however:
+[PARAGRAPH]Certain determiners, such as
+all
+,
+both
+,
+half
+,
+double
+, precede the definite article when used in combination (
+all the team
+,
+both the girls
+,
+half the time
+,
+double the amount
+).
+[PARAGRAPH]Such
+and
+what
+precede the indefinite article (
+such an idiot
+,
+what a day!
+).
+[PARAGRAPH]Adjectives qualified by
+too
+,
+so
+,
+as
+and
+how
+generally precede the indefinite article:
+too great a loss
+,
+so hard a problem
+,
+as delicious an apple as I have ever tasted
+,
+I know how pretty a girl she is
+.
+[PARAGRAPH]When adjectives are qualified by
+quite
+(particularly when it means “fairly”), the word
+quite
+(but not the adjective itself) often precedes the indefinite article:
+quite a long letter
+.
+[HEADING]Contribute!
+[PARAGRAPH]Did you have an idea for improving this content? We’d love your input.
+[OTHER]Improve this page
+[HEADING]Learn More
+[HEADING]Candela Citations
+[OTHER]CC licensed content, Original
+[PARAGRAPH]Revision and Adaptation.
+[PARAGRAPH]Provided by
+: Lumen Learning.
+[PARAGRAPH]License
+:
+CC BY-SA: Attribution-ShareAlike
+[OTHER]CC licensed content, Shared previously
+[PARAGRAPH]English articles.
+[PARAGRAPH]Provided by
+: Wikipedia.
+[PARAGRAPH]Located at
+:
+https://en.wikipedia.org/wiki/English_articles
+.
+[PARAGRAPH]License
+:
+CC BY-SA: Attribution-ShareAlike
+[PARAGRAPH]Definite and indefinite articles.
+[PARAGRAPH]Authored by
+: David Rheinstrom.
+[PARAGRAPH]Provided by
+: Khan Academy.
+[PARAGRAPH]Located at
+:
+https://www.khanacademy.org/humanities/grammar/partsofspeech/the-modifier/v/definite-and-indefinite-articles
+.
+[PARAGRAPH]License
+:
+CC BY-NC-SA: Attribution-NonCommercial-ShareAlike
+[HEADING]Licenses and Attributions
+[OTHER]CC licensed content, Original
+[PARAGRAPH]Revision and Adaptation.
+[PARAGRAPH]Provided by
+: Lumen Learning.
+[PARAGRAPH]License
+:
+CC BY-SA: Attribution-ShareAlike
+[OTHER]CC licensed content, Shared previously
+[PARAGRAPH]English articles.
+[PARAGRAPH]Provided by
+: Wikipedia.
+[PARAGRAPH]Located at
+:
+https://en.wikipedia.org/wiki/English_articles
+.
+[PARAGRAPH]License
+:
+CC BY-SA: Attribution-ShareAlike
+[PARAGRAPH]Definite and indefinite articles.
+[PARAGRAPH]Authored by
+: David Rheinstrom.
+[PARAGRAPH]Provided by
+: Khan Academy.
+[PARAGRAPH]Located at
+:
+https://www.khanacademy.org/humanities/grammar/partsofspeech/the-modifier/v/definite-and-indefinite-articles
+.
+[PARAGRAPH]License
+:
+CC BY-NC-SA: Attribution-NonCommercial-ShareAlike
+[MENU_ITEM]Previous
+[MENU_ITEM]Next
