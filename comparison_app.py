@@ -6,13 +6,18 @@ import re
 import gradio as gr
 from bs4 import BeautifulSoup
 from docx import Document
+from google import genai
+from google.genai.errors import APIError
+
+# --- CONFIGURATION ---
+MODEL_NAME = "gemini-2.5-flash"
 
 # --- UTILITY FUNCTIONS ---
 
 def get_page_content_raw(url):
     """
-    Fetches the webpage content and extracts raw, sequential text.
-    Returns text normalized to a single string for comparison.
+    Fetches the webpage content and returns the raw, visible text content
+    after cleaning non-relevant tags (scripts/styles).
     """
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
@@ -21,188 +26,250 @@ def get_page_content_raw(url):
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Remove common noise tags
-        for tag in soup(['script', 'style', 'head', 'meta', 'link', 'noscript', 'nav', 'footer', 'header', 'aside']):
+        # Aggressively remove noise tags for cleaner input to Gemini
+        for tag in soup(['script', 'style', 'head', 'meta', 'link', 'noscript', 'img', 'svg']):
             tag.decompose()
-
-        # Extract all visible text, normalizing large whitespace blocks
-        raw_text = soup.get_text(separator=' ', strip=True)
         
-        # Lowercase and remove punctuation for a more flexible, word-based comparison, 
-        # but keep it case-sensitive here to detect case mismatches/typos accurately.
-        # We will keep the content as raw as possible and clean it during line processing.
-        return raw_text, None
+        # Extract visible text using a newline separator to help Gemini detect block boundaries
+        visible_text = soup.get_text(separator='\n', strip=True)
+        return visible_text, None
 
     except requests.exceptions.RequestException as e:
         return None, f"ERROR: Could not fetch URL. Details: {e}"
 
-def get_docx_text_by_paragraph(docx_filepath):
+def generate_labeled_structure(raw_text_input):
     """
-    Extracts all text from an uploaded DOCX file, returning a list of paragraphs.
-    This preserves the structure of the source of truth (the DOCX).
+    Uses Gemini to analyze the text and tag content by its semantic role,
+    preserving all typos and exact wording.
     """
+    if not os.getenv("GEMINI_API_KEY"):
+        return None, "FATAL ERROR: GEMINI_API_KEY environment variable not set."
+        
+    print(f"-> Sending text to Gemini for structured labeling ({MODEL_NAME})...")
+    
+    # The prompt instructs Gemini to use tags that match the user's expected DOCX labels 
+    # (H1, TEASER, MENU ITEM, etc.) but format them like [TAG] Content for clean comparison.
+    prompt = f"""
+    You are a meticulous content extractor. Your task is to process the following raw webpage text and structure it into a document where every piece of content is labeled by its most likely HTML/UI role.
+
+    You MUST output the original text content exactly as given, including any spelling mistakes or inconsistencies. DO NOT paraphrase or summarize. The only thing you can add are the structural labels.
+
+    Use the following bracketed labels for common elements, based on the input text structure:
+    [TITLE_H1]: For the main page title (H1).
+    [TITLE_H2]: For major section headings (H2).
+    [TEASER_SECTION]: For promotional or summary blocks (teasers).
+    [BANNER]: For large, prominent promotional areas.
+    [MENU_ITEM]: For navigation links or menu list items.
+    [PARAGRAPH]: For standard body text.
+    [CAPTION]: For image captions or figure labels.
+    [TABLE_CELL]: For content found inside tables.
+    [OTHER]: For any text that doesn't fit the above (e.g., footers, utility text).
+
+    Place the label immediately before the content, and ensure each labeled block is on a new line.
+
+    --- RAW WEBPAGE TEXT ---
+    {raw_text_input}
+    """
+    
+    try:
+        client = genai.Client()
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt
+        )
+        return response.text.strip(), None
+    except APIError as e:
+        return None, f"ERROR: Gemini API failed. Check your GEMINI_API_KEY and limits. Details: {e}"
+    except Exception as e:
+        return None, f"ERROR: An unexpected error occurred: {e}"
+
+def get_docx_content_and_labels(docx_filepath):
+    """
+    Extracts content from DOCX paragraphs, stripping the user's labels 
+    (e.g., 'title(h1) : Hello People' -> '[TITLE_H1] Hello People').
+    """
+    # Regex to capture the label (group 1) and the content (group 2)
+    # Allows for any label followed by a colon and whitespace before the content
+    LABEL_PATTERN = re.compile(r"^(.*?)\s*:\s*(.*)$")
+    extracted_lines = []
+    
     try:
         document = Document(docx_filepath)
-        # Return a list of stripped paragraphs, ignoring empty ones
-        paragraphs = [p.text.strip() for p in document.paragraphs if p.text.strip()]
-        return paragraphs, None
+        for p in document.paragraphs:
+            text = p.text.strip()
+            if not text:
+                continue
+
+            match = LABEL_PATTERN.match(text)
+            
+            if match:
+                # 1. Normalize the label (e.g., title(h1) -> TITLE_H1)
+                raw_label = match.group(1).strip().upper().replace(" ", "_").replace("(", "").replace(")", "")
+                content = match.group(2).strip()
+                
+                # 2. Reformat to match Gemini's output: [TITLE_H1] Hello People
+                formatted_label = f"[{raw_label}]"
+                extracted_lines.append(f"{formatted_label} {content}")
+            else:
+                # If no label is found, assume it's a PARAGRAPH and use the default label
+                extracted_lines.append(f"[PARAGRAPH] {text}")
+                
+        return extracted_lines, None
     except Exception as e:
         return None, f"ERROR: Failed to read DOCX file. Details: {e}"
 
-def normalize_text(text):
-    """Normalizes text for easier searching (removes excess space, lowercases)."""
-    # Remove all non-alphanumeric characters except spaces
-    text = re.sub(r'[^a-z0-9\s]', '', text.lower())
-    # Replace multiple spaces with a single space
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+def create_labeled_docx_output(text_content):
+    """Saves the Gemini-labeled content into a TXT file for user review."""
+    # Saves as .txt for easy review of the labeled output
+    output_filepath = f"scraped_labeled_web_content_{int(time.time())}.txt"
+    with open(output_filepath, 'w', encoding='utf-8') as f:
+        f.write(text_content)
+    return output_filepath
 
 # --- CORE COMPARISON LOGIC ---
 
-def validate_content(docx_paragraphs, scraped_text_raw):
+def compare_texts(expected_lines, actual_text):
     """
-    Compares DOCX paragraphs against the raw scraped text to find mismatches.
-    Only content from the DOCX is validated.
+    Compares the list of expected (DOCX, labeled) lines against the actual (Gemini-labeled) text.
+    The comparison is DOCX-to-Website ONLY (validation).
+    This version includes MATCHING lines in the report.
     """
-    results = []
+    actual_lines = [line.strip() for line in actual_text.splitlines() if line.strip()]
+
+    # Use SequenceMatcher for detailed, ordered, line-by-line comparison
+    differ = difflib.Differ()
+    diff = list(differ.compare(expected_lines, actual_lines))
+
+    output_lines = []
     has_mismatches = False
     
-    # Normalize the entire scraped text once for efficient searching
-    scraped_text_normalized = normalize_text(scraped_text_raw)
+    output_lines.append("| Status | Expected Content (from DOCX) | Mismatch Detail |")
+    output_lines.append("| :--- | :--- | :--- |")
 
-    for i, docx_paragraph in enumerate(docx_paragraphs):
-        # Normalize the paragraph for searching
-        docx_normalized = normalize_text(docx_paragraph)
+    # This array will hold all results: matches and mismatches
+    comparison_results = []
+
+    for line in diff:
+        prefix = line[0]
+        content = line[2:].strip()
         
-        # Use a simple "contains" check on the normalized text first
-        if docx_normalized in scraped_text_normalized:
-            # Found (we assume this is a match, though structural context is ignored)
-            results.append({
-                "status": "✅ MATCH",
-                "expected": docx_paragraph,
-                "actual": "Content found on website (context ignored)",
-                "details": "Paragraph text found on the live page."
+        if not content:
+            continue
+        
+        # --- Handle Matches ---
+        if prefix == ' ':
+            # Match: Content and structure tag are identical
+            comparison_results.append({
+                "status": "✅ MATCHING", 
+                "expected": content, 
+                "detail": "Content and structural tag are identical on the website."
             })
-        else:
-            # Content is MISSING or has MISMATACHES (typos, extra words, missing words)
+        
+        # --- Handle Mismatches/Missing Content ---
+        elif prefix == '-':
+            # Content is in DOCX but MISSING or MISMATACHED on the website
             has_mismatches = True
             
-            # Use SequenceMatcher to find specific word differences for better reporting
-            docx_words = docx_paragraph.split()
+            # 1. Strip the label to get the core text
+            content_only = re.sub(r'^\[.*?\]\s*', '', content).strip()
             
-            # Since the paragraph didn't match the normalized site text, 
-            # we compare the paragraph's words against the entire site's words 
-            # to pinpoint where the difference lies.
+            # 2. Check if the content *without the label* exists anywhere in the actual text
+            actual_content_for_search = re.sub(r'\[.*?\]', '', actual_text).strip()
             
-            # This is complex, so we'll simplify the failure report:
+            details = "The labeled content was not found."
+            if content_only and content_only in actual_content_for_search:
+                details = "STRUCTURAL ERROR: Content found on page, but under a DIFFERENT label/structure (e.g., expected [TITLE_H1], found [PARAGRAPH])."
+            else:
+                details = "CONTENT ERROR: Text is Missing, has Typos, or major Mismatches on the website."
             
-            # Option 1: Detailed Word-Level Diff (Accurate but slower/more complex UI)
-            
-            # Option 2: Simple Flagging (Better for immediate validation)
-            
-            # We flag this paragraph as a failure because the whole paragraph (normalized) 
-            # was not found in the whole scraped text (normalized).
-            
-            # To try and show where the mismatch occurred, we report the best "close match"
-            
-            # Since we can't efficiently run difflib against an entire large document, 
-            # we report the full paragraph as missing/mismatched and provide the full scraped text 
-            # as context for manual review.
-            
-            results.append({
-                "status": "❌ MISMATCH/MISSING",
-                "expected": docx_paragraph,
-                "actual": "Not found or contains differences/typos on website.",
-                "details": "The exact paragraph text (when normalized) could not be found anywhere on the page. Check for typos or missing content."
+            comparison_results.append({
+                "status": "❌ MISMATCH", 
+                "expected": content, 
+                "detail": details
             })
-
-    # --- FORMAT OUTPUT ---
-    
-    output_markdown = []
-    
-    if not has_mismatches:
-        output_markdown.append("## ✅ Validation Successful: No Mismatches Found in Reference Document")
-        output_markdown.append("All paragraphs from the DOCX file were found on the live webpage (ignoring structural context).")
-    else:
-        output_markdown.append("## ⚠️ Mismatches Detected")
-        output_markdown.append("The following paragraphs from the DOCX file were either not found or had discrepancies on the website.")
-        output_markdown.append("\n| Status | Expected Paragraph (from DOCX) | Mismatch Details |")
-        output_markdown.append("| :--- | :--- | :--- |")
         
-        # Filter for only the mismatches to display in the table
-        mismatch_count = 0
-        for item in results:
-            if item["status"] == "❌ MISMATCH/MISSING":
-                mismatch_count += 1
-                # Truncate expected text for table display
-                expected_display = item['expected'][:100].replace('\n', ' ') + ('...' if len(item['expected']) > 100 else '')
-                output_markdown.append(f"| {item['status']} | `{expected_display}` | {item['details']} |")
+        elif prefix == '+':
+            # Content is EXTRA on the website, which we ignore for the detailed report but track its existence
+            continue 
+        
+    # --- Build the Final Report Table ---
+    for item in comparison_results:
+        # Truncate content for table display
+        expected_display = item['expected'][:100].replace('\n', ' ') + ('...' if len(item['expected']) > 100 else '')
+        output_lines.append(f"| {item['status']} | `{expected_display}` | {item['detail']} |")
 
-    # Flag all other content as extra
-    output_markdown.append("\n## Extra Website Content Flag")
-    output_markdown.append("The tool only validates content from the DOCX. All other content on the live website (headers, footers, teasers, ads, etc.) is flagged as 'Extra Website Content' and is not included in the detailed table.")
 
-    return has_mismatches, "\n".join(output_markdown), scraped_text_raw
+    if not has_mismatches:
+        report = "## ✅ Perfect Structural Match Found"
+        report += "\nAll labeled content in the DOCX was found with the correct structural tag and exact content on the live page."
+    else:
+        report = "## ⚠️ Structural Mismatches Detected"
+        report += "\nThe following is the complete report, including all matches and mismatches."
+    
+    report += "\n\n" + "\n".join(output_lines)
+    report += "\n\n---\n\n## Extra Website Content Flag\n"
+    report += "All website content not explicitly listed in the DOCX is considered 'Extra Website Content' (e.g., current date, unique ads) and is not listed in the detailed table above."
+
+    return report
 
 # --- GRADIO INTERFACE FUNCTION ---
 
-def run_validation(url, comparison_file):
+def run_structural_validation(url, comparison_file):
     """
-    Orchestrates scraping, DOCX extraction, and content validation.
+    Orchestrates scraping, DOCX label stripping, Gemini structural analysis, and comparison.
     """
     if not comparison_file:
-        return None, "ERROR: Please upload a DOCX file for comparison.", ""
+        return None, "ERROR: Please upload a DOCX file for comparison."
 
-    # 1. Scrape the raw content
-    scraped_text_raw, error_scrape = get_page_content_raw(url)
+    # 1. Scrape the raw visible text
+    raw_text, error_scrape = get_page_content_raw(url)
     if error_scrape:
-        return None, error_scrape, ""
-    
-    # 2. Extract paragraphs from the comparison DOCX (Source of Truth)
-    docx_paragraphs, error_docx = get_docx_text_by_paragraph(comparison_file.name)
+        return None, error_scrape
+
+    # 2. Structural Analysis using Gemini
+    labeled_web_content, error_gemini = generate_labeled_structure(raw_text)
+    if error_gemini:
+        return None, error_gemini
+
+    # 3. Extract and strip labels from DOCX (Expected content)
+    docx_labeled_lines, error_docx = get_docx_content_and_labels(comparison_file.name)
     if error_docx:
-        return None, error_docx, ""
+        return None, error_docx
 
-    # 3. Perform Validation
-    has_mismatches, validation_report_markdown, raw_web_text = validate_content(docx_paragraphs, scraped_text_raw)
+    # 4. Compare DOCX lines against Labeled Web Content
+    validation_report_markdown = compare_texts(docx_labeled_lines, labeled_web_content)
     
-    # 4. Save the Raw Scraped content for the user to download
-    # We save the raw scraped text so the user can see what was used for comparison
-    output_filepath = f"scraped_web_content_{int(time.time())}.txt"
-    with open(output_filepath, 'w', encoding='utf-8') as f:
-        f.write(raw_web_text)
+    # 5. Save the Labeled Web Content for the user to download
+    output_filepath = create_labeled_docx_output(labeled_web_content)
 
-    # 5. Return results to Gradio
-    return (
-        output_filepath,
-        validation_report_markdown
-    )
+    # 6. Return results to Gradio
+    return output_filepath, validation_report_markdown
 
 # --- GRADIO UI DEFINITION ---
 
 url_input = gr.Textbox(
-    label="1. Website URL to Validate (Actual Content)",
+    label="1. Website URL to Validate (Actual Complex Content)",
     placeholder="Enter the full URL (e.g., https://example.com/data)",
     value="https://en.wikipedia.org/wiki/Python_(programming_language)"
 )
 
 comparison_input = gr.File(
-    label="2. Upload Reference DOCX (Source of Truth)",
+    label="2. Upload Reference DOCX (Expected Content: e.g., 'title(h1) : Hello People')",
     type="filepath",
-    # Removed file_types=["docx"] to prevent upload errors as requested
+    # Removed file_types for compatibility
 )
 
-file_output = gr.File(label="A. Download Raw Web Content (Used for Comparison)")
-validation_report = gr.Markdown(label="B. Validation Report: DOCX Content vs. Live Website")
+file_output = gr.File(label="A. Download Gemini-Labeled Web Content (For Review)")
+validation_report = gr.Markdown(label="B. Structural Validation Report: DOCX vs. Live Website")
 
 
 iface = gr.Interface(
-    fn=run_validation,
+    fn=run_structural_validation,
     inputs=[url_input, comparison_input],
     outputs=[file_output, validation_report],
-    title="Content Validation Tool: DOCX to Website Check",
-    description="This tool strictly validates whether every paragraph in your reference DOCX file is present on the live website. Any discrepancies (typos, missing words, extra words) will be flagged as a MISMATCH. All website content not in the DOCX is considered 'Extra Website Content' and ignored for the detailed report.",
-    # Removed allow_flagging="never" to fix compatibility issue with current Gradio version.
+    title="Structural Content Validation Tool (AI-Powered)",
+    description="This tool uses the Gemini API to analyze complex website structures and tags content. Your DOCX must use the format `label(tag) : content` (e.g., `title(h1) : Welcome`). The tool validates that the content exists with the correct structural tag.",
+    # Removed allow_flagging="never" due to Gradio version conflict
 )
 
 if __name__ == "__main__":
